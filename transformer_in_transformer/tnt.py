@@ -103,6 +103,9 @@ class TNT(nn.Module):
             nn.Linear(3 * pixel_width ** 2, pixel_dim)
         )
 
+        self.patch_pos_emb = nn.Parameter(torch.randn(num_patch_tokens + 1, patch_dim))
+        self.pixel_pos_emb = nn.Parameter(torch.randn(num_pixels, pixel_dim))
+
         layers = nn.ModuleList([])
         for _ in range(depth):
             layers.append(nn.ModuleList([
@@ -128,6 +131,9 @@ class TNT(nn.Module):
 
         pixels = self.to_pixel_tokens(x)
         patches = repeat(self.patch_tokens, 'n d -> b n d', b = b)
+
+        patches += rearrange(self.patch_pos_emb, 'n d -> () n d')
+        pixels += rearrange(self.pixel_pos_emb, 'n d -> () n d')
 
         for pixel_attn, pixel_ff, pixel_to_patch_residual, patch_attn, patch_ff in self.layers:
 
