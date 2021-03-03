@@ -108,10 +108,17 @@ class TNT(nn.Module):
 
         layers = nn.ModuleList([])
         for _ in range(depth):
+
+            pixel_to_patch = nn.Sequential(
+                nn.LayerNorm(pixel_dim),
+                Rearrange('... n d -> ... (n d)'),
+                nn.Linear(pixel_dim * num_pixels, patch_dim),
+            )
+
             layers.append(nn.ModuleList([
                 PreNorm(pixel_dim, Attention(dim = pixel_dim, heads = heads, dim_head = dim_head, dropout = attn_dropout)),
                 PreNorm(pixel_dim, FeedForward(dim = pixel_dim, dropout = ff_dropout)),
-                nn.Linear(pixel_dim * num_pixels, patch_dim),
+                pixel_to_patch,
                 PreNorm(patch_dim, Attention(dim = patch_dim, heads = heads, dim_head = dim_head, dropout = attn_dropout)),
                 PreNorm(patch_dim, FeedForward(dim = patch_dim, dropout = ff_dropout)),
             ]))
@@ -140,9 +147,9 @@ class TNT(nn.Module):
             pixels = pixel_attn(pixels) + pixels
             pixels = pixel_ff(pixels) + pixels
 
-            flattened_pixel_tokens = rearrange(pixels, '(b h w) n d -> b (h w) (n d)', h = num_patches, w = num_patches)
-            patches_residual = pixel_to_patch_residual(flattened_pixel_tokens)
+            patches_residual = pixel_to_patch_residual(pixels)
 
+            patches_residual = rearrange(patches_residual, '(b h w) d -> b (h w) d', h = num_patches, w = num_patches)
             patches_residual = F.pad(patches_residual, (0, 0, 1, 0), value = 0) # cls token gets residual of 0
             patches = patches + patches_residual
 
