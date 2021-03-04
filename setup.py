@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'transformer-in-transformer',
   packages = find_packages(),
-  version = '0.0.3',
+  version = '0.0.4',
   license='MIT',
   description = 'Transformer in Transformer - Pytorch',
   author = 'Phil Wang',

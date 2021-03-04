@@ -97,7 +97,7 @@ class TNT(nn.Module):
         self.patch_tokens = nn.Parameter(torch.randn(num_patch_tokens + 1, patch_dim))
 
         self.to_pixel_tokens = nn.Sequential(
-            Rearrange('b c (p1 h) (p2 w) -> (b h w) c p1 p2', p1 = patch_size, p2 = patch_size),
+            Rearrange('b c (h p1) (w p2) -> (b h w) c p1 p2', p1 = patch_size, p2 = patch_size),
             nn.Unfold(pixel_width, stride = pixel_width),
             Rearrange('... c n -> ... n c'),
             nn.Linear(3 * pixel_width ** 2, pixel_dim)
