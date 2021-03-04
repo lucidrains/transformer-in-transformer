@@ -87,6 +87,7 @@ class TNT(nn.Module):
     ):
         super().__init__()
         assert image_size % patch_size == 0, 'image size must be divisible by patch size'
+        assert patch_size % pixel_size == 0, 'patch size must be divisible by pixel size for now'
 
         num_patch_tokens = (image_size // patch_size) ** 2
         pixel_width = patch_size // pixel_size
