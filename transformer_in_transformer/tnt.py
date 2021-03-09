@@ -10,6 +10,9 @@ from einops.layers.torch import Rearrange
 def exists(val):
     return val is not None
 
+def divisible_by(val, divisor):
+    return (val % divisor) == 0
+
 # classes
 
 class PreNorm(nn.Module):
@@ -86,8 +89,8 @@ class TNT(nn.Module):
         attn_dropout = 0.
     ):
         super().__init__()
-        assert image_size % patch_size == 0, 'image size must be divisible by patch size'
-        assert patch_size % pixel_size == 0, 'patch size must be divisible by pixel size for now'
+        assert divisible_by(image_size, patch_size), 'image size must be divisible by patch size'
+        assert divisible_by(patch_size, pixel_size), 'patch size must be divisible by pixel size for now'
 
         num_patch_tokens = (image_size // patch_size) ** 2
         pixel_width = patch_size // pixel_size
@@ -133,14 +136,16 @@ class TNT(nn.Module):
 
     def forward(self, x):
         b, _, h, w, patch_size, image_size = *x.shape, self.patch_size, self.image_size
-        assert h == image_size and w == image_size, f'height {h} and width {w} of input must be given image size of {image_size}'
+        assert divisible_by(h, patch_size) and divisible_by(w, patch_size), f'height {h} and width {w} of input must be divisible by the patch size'
 
-        num_patches = image_size // patch_size
+        num_patches_h = h // patch_size
+        num_patches_w = w // patch_size
+        n = num_patches_w * num_patches_h
 
         pixels = self.to_pixel_tokens(x)
-        patches = repeat(self.patch_tokens, 'n d -> b n d', b = b)
+        patches = repeat(self.patch_tokens[:(n + 1)], 'n d -> b n d', b = b)
 
-        patches += rearrange(self.patch_pos_emb, 'n d -> () n d')
+        patches += rearrange(self.patch_pos_emb[:(n + 1)], 'n d -> () n d')
         pixels += rearrange(self.pixel_pos_emb, 'n d -> () n d')
 
         for pixel_attn, pixel_ff, pixel_to_patch_residual, patch_attn, patch_ff in self.layers:
@@ -150,7 +155,7 @@ class TNT(nn.Module):
 
             patches_residual = pixel_to_patch_residual(pixels)
 
-            patches_residual = rearrange(patches_residual, '(b h w) d -> b (h w) d', h = num_patches, w = num_patches)
+            patches_residual = rearrange(patches_residual, '(b h w) d -> b (h w) d', h = num_patches_h, w = num_patches_w)
             patches_residual = F.pad(patches_residual, (0, 0, 1, 0), value = 0) # cls token gets residual of 0
             patches = patches + patches_residual
 
