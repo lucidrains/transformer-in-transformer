@@ -102,7 +102,7 @@ class TNT(nn.Module):
 
         self.to_pixel_tokens = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> (b h w) c p1 p2', p1 = patch_size, p2 = patch_size),
-            nn.Unfold(pixel_size, stride = pixel_size),
+            nn.Unfold(kernel_size = 7, stride = pixel_size, padding = 3),
             Rearrange('... c n -> ... n c'),
             nn.Linear(3 * pixel_size ** 2, pixel_dim)
         )
