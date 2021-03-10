@@ -10,8 +10,14 @@ from einops.layers.torch import Rearrange
 def exists(val):
     return val is not None
 
+def default(val, d):
+    return val if exists(val) else d
+
 def divisible_by(val, divisor):
     return (val % divisor) == 0
+
+def unfold_output_size(image_size, kernel_size, stride, padding):
+    return int(((image_size - kernel_size + (2 * padding)) / stride) + 1)
 
 # classes
 
@@ -86,25 +92,31 @@ class TNT(nn.Module):
         heads = 8,
         dim_head = 64,
         ff_dropout = 0.,
-        attn_dropout = 0.
+        attn_dropout = 0.,
+        unfold_args = None
     ):
         super().__init__()
         assert divisible_by(image_size, patch_size), 'image size must be divisible by patch size'
         assert divisible_by(patch_size, pixel_size), 'patch size must be divisible by pixel size for now'
 
         num_patch_tokens = (image_size // patch_size) ** 2
-        pixel_width = patch_size // pixel_size
-        num_pixels = pixel_width ** 2
 
         self.image_size = image_size
         self.patch_size = patch_size
         self.patch_tokens = nn.Parameter(torch.randn(num_patch_tokens + 1, patch_dim))
 
+        unfold_args = default(unfold_args, (pixel_size, pixel_size, 0))
+        unfold_args = (*unfold_args, 0) if len(unfold_args) == 2 else unfold_args
+        kernel_size, stride, padding = unfold_args
+
+        pixel_width = unfold_output_size(patch_size, kernel_size, stride, padding)
+        num_pixels = pixel_width ** 2
+
         self.to_pixel_tokens = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> (b h w) c p1 p2', p1 = patch_size, p2 = patch_size),
-            nn.Unfold(pixel_size, stride = pixel_size),
+            nn.Unfold(kernel_size = kernel_size, stride = stride, padding = padding),
             Rearrange('... c n -> ... n c'),
-            nn.Linear(3 * pixel_size ** 2, pixel_dim)
+            nn.Linear(3 * kernel_size ** 2, pixel_dim)
         )
 
         self.patch_pos_emb = nn.Parameter(torch.randn(num_patch_tokens + 1, patch_dim))
