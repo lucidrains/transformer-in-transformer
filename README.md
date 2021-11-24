@@ -4,7 +4,7 @@
 
 Implementation of <a href="https://arxiv.org/abs/2103.00112">Transformer in Transformer</a>, pixel level attention paired with patch level attention for image classification, in Pytorch.
 
-<a href="https://www.youtube.com/watch?v=HWna2c5VXDg">AI Coffee Break with Letita</a>
+<a href="https://www.youtube.com/watch?v=HWna2c5VXDg">AI Coffee Break with Letitia</a>
 
 ## Install
 
