@@ -89,6 +89,7 @@ class TNT(nn.Module):
         pixel_size,
         depth,
         num_classes,
+        channels = 3,
         heads = 8,
         dim_head = 64,
         ff_dropout = 0.,
@@ -116,7 +117,7 @@ class TNT(nn.Module):
             Rearrange('b c (h p1) (w p2) -> (b h w) c p1 p2', p1 = patch_size, p2 = patch_size),
             nn.Unfold(kernel_size = kernel_size, stride = stride, padding = padding),
             Rearrange('... c n -> ... n c'),
-            nn.Linear(3 * kernel_size ** 2, pixel_dim)
+            nn.Linear(channels * kernel_size ** 2, pixel_dim)
         )
 
         self.patch_pos_emb = nn.Parameter(torch.randn(num_patch_tokens + 1, patch_dim))
